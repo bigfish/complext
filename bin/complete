@@ -1,0 +1,5 @@
+#!/usr/bin/node
+var complext = require('./complext'),
+	base = process.argv[2] || '';
+
+complext.complete(base);
