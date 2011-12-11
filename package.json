@@ -1,0 +1,30 @@
+{
+    "name": "complext",
+    "description": "Code completion of JavaScript for Vim, using JSDuck metadata",
+    "version": "0.1.0",
+    "keywords": ["vim", "completion", "extjs", "plugin"],
+    "maintainers": [{
+        "name": "David Wilhelm",
+        "web": "http://dafishinsea.com"
+    }],
+    "contributors": [{
+        "name": "David Wilhelm",
+        "web": "http://dafishinsea.com"
+    }],
+    "licenses": ["MIT"],
+    "repositories": {
+        "type": "git",
+        "url": "http://github.com/bigfish/complext.git"
+    },
+    "engines": {
+        "node": ">= 0.4.x < 0.7.0"
+    },
+    "devDependencies": {
+        "mocha": "0.3.x",
+        "should": "0.3.x"
+    },
+    "scripts": {
+        "test": "mocha"
+    }
+
+}

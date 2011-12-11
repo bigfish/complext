@@ -15,8 +15,7 @@ function complete(base) {
         }),
         //note - we don't return everything for empty string
         result = "let g:complextions = " + (base ? JSON.stringify(completions) : '[]');
-
-    process.stdout.write(result);
+    return result;
 }
 
 exports.complete = complete;
