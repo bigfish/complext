@@ -1,14 +1,14 @@
 /*jslint node:true*/
-/*global require:false, beforeEach:false, describe:false, it:false */
+/*global should:false, require:false, beforeEach:false, describe:false, it:false */
 describe("complete", function () {
-    var complete;
-    require('should');
+    var complete = require("../bin/complext").complete,
+        should = require('should');
 
-    beforeEach(function () {
-        //get a new instance of the complete function
-        complete = require("../bin/complext").complete;
-    });
-    
+    function parseResult(r) {
+        var arrStr = r.split("=")[1].trim();
+        return JSON.parse(arrStr);
+    }
+
     it("should export a function called 'complete'", function () {
         complete.should.be.a('function');
     });
@@ -18,5 +18,35 @@ describe("complete", function () {
         result.should.match(/^let g:complextions = .*/);
     });
 
-    //it("should complete 'Ex' with ['Ext', 'ExceptionEvent']")
+    it("should complete 'Ex' with ['Ext', 'ExceptionEvent']", function () {
+        var result = complete("Ex"),
+            results = parseResult(result);
+        should.exist(results[0].word);
+        results[0].word.should.eql("Ext");
+    });
+
+    it("should return an array of objects of with the right properties", function () {
+        var result = complete("Ex"),
+            results = parseResult(result);
+        results[0].word.should.eql("Ext");
+        should.exist(results[0].menu);
+        results[0].menu.should.eql("Ext");
+        should.exist(results[0].kind);
+        results[0].kind.should.eql("c");
+    });
+    
+    it("should complete capitalized barewords with top-level classes", function () {
+        var result = complete("Ar"),
+            results = parseResult(result);
+        results.length.should.eql(1);
+    });
+
+    it("should complete class members", function () {
+        var result = complete("Ext.cr"),
+            results = parseResult(result);
+
+        results[0].word.should.eql("Ext.create");
+    });
+
+
 });
