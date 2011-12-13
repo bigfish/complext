@@ -51,7 +51,7 @@ function getClassData(className) {
         data;
     //define the function which is called in the data file
     //to capture the data passed as argument
-    Ext.data.JsonP[className.replace('.', '_')] = function (d) {
+    Ext.data.JsonP[className.replace(/\./g, '_')] = function (d) {
         data = d;
     };
     //evaluate the file, causing the function to be called
@@ -68,69 +68,94 @@ function formatMatches(base, matches) {
     //format output as dictionaries
     var prefix = base.indexOf('.') !== -1 ? base.substr(0, base.lastIndexOf('.')) : '',
         completions = matches.map(function (match) {
-            return {
-                word: (prefix ? prefix + '.' : '') + match.member,
-                kind: getKind(match.type),
-                menu: match.cls
-            };
+            if (match.type === 'cls') {
+                return {
+                    word: match.cls,
+                    kind: 'c',
+                    menu: match.cls
+                };
+            } else {
+                return {
+                    word: (prefix ? prefix + '.' : '') + match.member,
+                    kind: getKind(match.type),
+                    menu: match.cls
+                };
+            }
         }),
         result = "let g:complextions = " + (base ? JSON.stringify(completions) : '[]');
     return result;
 }
 
+function findMatchingClasses(base) {
+    return Docs.data.search.filter(function (item) {
+        if(item.type === 'cls') {
+            return startsWith(item.cls, base);
+        } else {
+            return false;
+        }
+    });
+}
+
 //public API
 function complete(base) {
-    var matches, completions, result, parent, chain, members, incomplete_member, classData, matchingClasses;
-
+    var matches, completions, result, parent, chain,
+        members, incomplete_member, classData, matchingClasses,
+        static_members;
+    
+    //globals
     if (isBareWord(base)) {
         matches = completeBareword(base);
         if(matches && matches.length) {
             return formatMatches(base, matches);
         }
     }
+
+    //class name completions
+    matchingClasses = findMatchingClasses(base);
+    if(matchingClasses && matchingClasses.length) {
+        return formatMatches(base, matchingClasses);
+    }
+
     //handle dotted bases
     chain = base.split('.');
     incomplete_member = chain.pop();
     parent = chain.length === 1 ? chain[0] : chain.join('.');
-    
-    //if incomplete part starts with capital
-    //try to find matching class
-    if (/^[A-Z]/.test(incomplete_member)) {
-        matchingClasses = Docs.data.search.filter(function (item) {
-            var itemParent = item.cls.split('.');
-            itemParent.pop();
-            itemParent = itemParent.join('.');
-            if(item.type === 'cls') {
-                return itemParent === parent && startsWith(item.member, incomplete_member);
-            } else {
-                return false;
-            }
-        });
-        if(matchingClasses && matchingClasses.length) {
+
+    //load class data for details -- necessary to discover singletons
+    classData = getClassData(parent);
+
+    if (classData) {
+        //singletons
+        if (classData.singleton) {
+            //try to find matching members
+            //combine properties and methods
+            members = classData.members.method.concat(classData.members.property);
+            matches = members.filter(function (item) {
+                return startsWith(item.name, incomplete_member);
+            });
             //normalize matches
-            return formatMatches(base, matchingClasses);
+            matches = matches.map(function (match) {
+                return {
+                    member: match.name,
+                    type: match.tagname,
+                    cls: parent
+                };
+            });
+        } else {
+            //statics
+            static_members = classData.statics.property
+                        .concat(classData.statics.method)
+                        .concat(classData.statics.event);
+            //normalize matches
+            matches = static_members.map(function (static_member) {
+                return {
+                    member: static_member.name,
+                    type: static_member.tagname,
+                    cls: parent
+                };
+            });
         }
     }
-
-    //load class data for details
-    classData = getClassData(parent);
-    //singletons
-    if (classData.singleton) {
-        //try to find matching members
-        //combine properties and methods
-        members = classData.members.method.concat(classData.members.property);
-        matches = members.filter(function (item) {
-            return startsWith(item.name, incomplete_member);
-        });
-        //normalize matches
-        matches = matches.map(function (match) {
-            return {
-                member: match.name,
-                type: match.tagname,
-                cls: parent
-            };
-        });
-    } 
 
     //catch-all: filter on any matching members
     if(!matches || !matches.length) {

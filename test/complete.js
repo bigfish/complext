@@ -44,24 +44,44 @@ describe("complete", function () {
     it("should complete class members", function () {
         var result = complete("Ext.cr"),
             results = parseResult(result);
-
         results[0].word.should.eql("Ext.create");
     });
 
     it("should complete class properties", function () {
         var result = complete("Ext.enableF"),
             results = parseResult(result);
-
         results[0].word.should.eql("Ext.enableFx");
     });
 
     it("should complete child classes of Ext", function () {
         var result = complete("Ext.Arr"),
             results = parseResult(result);
-
         results[0].word.should.eql("Ext.Array");
-
     });
 
+    it("should complete namespaced classes of Ext", function () {
+        var result = complete("Ext.data.Mod"),
+            results = parseResult(result);
+        results[0].word.should.eql("Ext.data.Model");
+    });
+
+    it("should complete double namespaced classes", function () {
+        var result = complete("Ext.data.proxy.Ser"),
+            results = parseResult(result);
+        results[0].word.should.eql("Ext.data.proxy.Server");
+    });
+
+    it("should complete namespaces", function () {
+        var result = complete("Ext.dr"),
+            results = parseResult(result);
+        results[0].word.should.eql("Ext.draw.Color");
+    });
+
+    it("should complete static members for classes", function () {
+        var result = complete("Ext.button.Button."),
+            results = parseResult(result);
+        results[0].word.should.eql("Ext.button.Button.addStatics");
+
+    });
 
 });
