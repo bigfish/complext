@@ -48,5 +48,20 @@ describe("complete", function () {
         results[0].word.should.eql("Ext.create");
     });
 
+    it("should complete class properties", function () {
+        var result = complete("Ext.enableF"),
+            results = parseResult(result);
+
+        results[0].word.should.eql("Ext.enableFx");
+    });
+
+    it("should complete child classes of Ext", function () {
+        var result = complete("Ext.Arr"),
+            results = parseResult(result);
+
+        results[0].word.should.eql("Ext.Array");
+
+    });
+
 
 });

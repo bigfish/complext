@@ -6,9 +6,10 @@ fun! Complext(findstart, base)
     " locate the start of the word
     let line = getline('.')
     let start = col('.') - 1
-    while start > 0 && line[start - 1] =~ '\a'
+    while start > 0 && line[start - 1] =~ '[$A-Za-z0-9._-]'
       let start -= 1
     endwhile
+	echo start
     return start
   else
 	" execute the output of the Node.js script to get completions

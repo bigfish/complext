@@ -40,6 +40,7 @@ function completeBareword(base) {
     });
     return matches;
 }
+
 function getClassData(className) {
     var contents = fs.readFileSync(__dirname + '/../output/' + className + '.js', 'utf8'),
         Ext = {
@@ -48,63 +49,93 @@ function getClassData(className) {
             }
         },
         data;
-
+    //define the function which is called in the data file
+    //to capture the data passed as argument
     Ext.data.JsonP[className.replace('.', '_')] = function (d) {
         data = d;
     };
+    //evaluate the file, causing the function to be called
     eval(contents);
-    delete data.html;//very verbose
+    delete data.html;//remove very verbose html
     return data;
-
 }
+
+function formatMatches(base, matches) {
+    //format output as dictionaries
+    
+    var prefix = base.indexOf('.') !== -1 ? base.substr(0, base.lastIndexOf('.')) : '',
+        completions = matches.map(function (match) {
+            return {
+                word: (prefix ? prefix + '.' : '') + match.member,
+                kind: getKind(match.type),
+                menu: match.cls
+            };
+        }),
+        result = "let g:complextions = " + (base ? JSON.stringify(completions) : '[]');
+    return result;
+}
+
 //public API
 function complete(base) {
-    var matches, completions, result, parent, chain, incomplete_member, classData;
-
+    var matches, completions, result, parent, chain, members, incomplete_member, classData, matchingClasses;
+    fs.writeFileSync(__dirname + '/log.txt', base + "\n");
     if (isBareWord(base)) {
         matches = completeBareword(base);
     } else {
         chain = base.split('.');
         incomplete_member = chain.pop();
         parent = chain.length === 1 ? chain[0] : chain.join('.');
+        
+        //if incomplete part starts with capital
+        //try to find matching class
+        if (/^[A-Z]/.test(incomplete_member)) {
+            matchingClasses = Docs.data.search.filter(function (item) {
+                var itemParent = item.cls.split('.');
+                itemParent.pop();
+                itemParent = itemParent.join('.');
+                if(item.type === 'cls') {
+                    return (itemParent === parent &&
+                            item.member.substr(0, incomplete_member.length) === incomplete_member);
+
+                } else {
+                    return false;
+                }
+            });
+        }
+
+        if(matchingClasses && matchingClasses.length) {
+            //normalize matches
+            return formatMatches(base, matchingClasses);
+        }
+
         //load class data for details
         classData = getClassData(parent);
         //singletons
         if (classData.singleton) {
             //try to find matching members
-            matches = classData.members.method.filter(function (item) {
+            //combine properties and methods
+            members = classData.members.method.concat(classData.members.property);
+            matches = members.filter(function (item) {
                 return item.name.substr(0, incomplete_member.length) === incomplete_member;
             });
             //normalize matches
             matches = matches.map(function (match) {
                 return {
-                    member: parent + '.' + match.name,
+                    member: match.name,
                     type: match.tagname,
                     cls: parent
                 };
             });
         } 
     }
-    console.log(matches);
-
     //catch-all: filter on any matching members
     if(!matches || !matches.length) {
         matches = Docs.data.search.filter(function (item) {
             return item.member.substr(0, base.length) === base;
         });
     }
-    
-    //format output as dictionaries
-    completions = matches.map(function (match) {
-        return {
-            word: match.member,
-            kind: getKind(match.type),
-            menu: match.cls
-        };
-    });
-    //note - we don't return everything for empty string
-    result = "let g:complextions = " + (base ? JSON.stringify(completions) : '[]');
-    return result;
+    return formatMatches(base, matches);
+
 }
 
 exports.complete = complete;
