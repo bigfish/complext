@@ -78,56 +78,59 @@ function formatMatches(base, matches) {
 //public API
 function complete(base) {
     var matches, completions, result, parent, chain, members, incomplete_member, classData, matchingClasses;
-    fs.writeFileSync(__dirname + '/log.txt', base + "\n");
+
     if (isBareWord(base)) {
         matches = completeBareword(base);
-    } else {
-        chain = base.split('.');
-        incomplete_member = chain.pop();
-        parent = chain.length === 1 ? chain[0] : chain.join('.');
-        
-        //if incomplete part starts with capital
-        //try to find matching class
-        if (/^[A-Z]/.test(incomplete_member)) {
-            matchingClasses = Docs.data.search.filter(function (item) {
-                var itemParent = item.cls.split('.');
-                itemParent.pop();
-                itemParent = itemParent.join('.');
-                if(item.type === 'cls') {
-                    return (itemParent === parent &&
-                            item.member.substr(0, incomplete_member.length) === incomplete_member);
-
-                } else {
-                    return false;
-                }
-            });
+        if(matches && matches.length) {
+            return formatMatches(base, matches);
         }
+    }
+    //handle dotted bases
+    chain = base.split('.');
+    incomplete_member = chain.pop();
+    parent = chain.length === 1 ? chain[0] : chain.join('.');
+    
+    //if incomplete part starts with capital
+    //try to find matching class
+    if (/^[A-Z]/.test(incomplete_member)) {
+        matchingClasses = Docs.data.search.filter(function (item) {
+            var itemParent = item.cls.split('.');
+            itemParent.pop();
+            itemParent = itemParent.join('.');
+            if(item.type === 'cls') {
+                return (itemParent === parent &&
+                        item.member.substr(0, incomplete_member.length) === incomplete_member);
 
+            } else {
+                return false;
+            }
+        });
         if(matchingClasses && matchingClasses.length) {
             //normalize matches
             return formatMatches(base, matchingClasses);
         }
-
-        //load class data for details
-        classData = getClassData(parent);
-        //singletons
-        if (classData.singleton) {
-            //try to find matching members
-            //combine properties and methods
-            members = classData.members.method.concat(classData.members.property);
-            matches = members.filter(function (item) {
-                return item.name.substr(0, incomplete_member.length) === incomplete_member;
-            });
-            //normalize matches
-            matches = matches.map(function (match) {
-                return {
-                    member: match.name,
-                    type: match.tagname,
-                    cls: parent
-                };
-            });
-        } 
     }
+
+    //load class data for details
+    classData = getClassData(parent);
+    //singletons
+    if (classData.singleton) {
+        //try to find matching members
+        //combine properties and methods
+        members = classData.members.method.concat(classData.members.property);
+        matches = members.filter(function (item) {
+            return item.name.substr(0, incomplete_member.length) === incomplete_member;
+        });
+        //normalize matches
+        matches = matches.map(function (match) {
+            return {
+                member: match.name,
+                type: match.tagname,
+                cls: parent
+            };
+        });
+    } 
+
     //catch-all: filter on any matching members
     if(!matches || !matches.length) {
         matches = Docs.data.search.filter(function (item) {
