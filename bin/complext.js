@@ -60,9 +60,12 @@ function getClassData(className) {
     return data;
 }
 
+function startsWith(whole, start) {
+    return whole.substr(0, start.length) === start;
+}
+
 function formatMatches(base, matches) {
     //format output as dictionaries
-    
     var prefix = base.indexOf('.') !== -1 ? base.substr(0, base.lastIndexOf('.')) : '',
         completions = matches.map(function (match) {
             return {
@@ -98,9 +101,7 @@ function complete(base) {
             itemParent.pop();
             itemParent = itemParent.join('.');
             if(item.type === 'cls') {
-                return (itemParent === parent &&
-                        item.member.substr(0, incomplete_member.length) === incomplete_member);
-
+                return itemParent === parent && startsWith(item.member, incomplete_member);
             } else {
                 return false;
             }
@@ -119,7 +120,7 @@ function complete(base) {
         //combine properties and methods
         members = classData.members.method.concat(classData.members.property);
         matches = members.filter(function (item) {
-            return item.name.substr(0, incomplete_member.length) === incomplete_member;
+            return startsWith(item.name, incomplete_member);
         });
         //normalize matches
         matches = matches.map(function (match) {
@@ -134,7 +135,7 @@ function complete(base) {
     //catch-all: filter on any matching members
     if(!matches || !matches.length) {
         matches = Docs.data.search.filter(function (item) {
-            return item.member.substr(0, base.length) === base;
+            return startsWith(item.member, base);
         });
     }
     return formatMatches(base, matches);
